@@ -1,0 +1,1 @@
+This is a repo to hold agentic AI rules and configuration files for future development. 
