@@ -1,80 +1,38 @@
-# Frontend Agent Instructions
+# Frontend Agent Rules
 
-You are an expert frontend AI coding assistant. When working on this codebase, you must strictly adhere to the following tech stack, architectural guidelines, accessibility standards, and best practices.
+## Stack
+- **Core:** Vite, React (TS), TailwindCSS, shadcn/ui (use CLI to add), lucide-react.
+- **Routing:** Tanstack Router (Code-based for apps, file-based for sites).
+- **State:** React Query (remote), Zustand (global - only if strictly needed), Tanstack searchParams (URL).
+- **Forms:** React Hook Form + Zod.
+- **Testing:** Vitest, RTL, Playwright.
+- **Linting:** ESLint.
 
-## 1. Tech Stack
-- **Build Tool / Framework:** Vite + React (TypeScript)
-- **Routing:** Tanstack Router (`@tanstack/react-router`)
-  - *Default to Code-based routing for complex webapps, and file-based routing for simpler websites.*
-- **State Management & Data Fetching:** 
-  - Remote State: React Query (`@tanstack/react-query`)
-  - Local/Global State: Zustand (ONLY use if the app grows to the point that a global state is strictly necessary).
-  - URL State: Leverage Tanstack Router's type-safe `searchParams` for URL-driven state (pagination, filters, tabs, etc.).
-- **Forms & Validation:** React Hook Form + Zod
-- **Styling:** TailwindCSS
-- **UI Components:** shadcn/ui (radix-ui under the hood)
-- **Icons:** `lucide-react`
-- **Testing:** 
-  - Unit/Integration: Vitest + React Testing Library
-  - End-to-End: Playwright
-- **Linting:** ESLint
+## Architecture: Feature-Sliced Design (FSD)
+- **Layers (Top down):** `app` -> `processes` (optional) -> `pages` -> `widgets` -> `features` -> `entities` -> `shared`.
+- **Rules:** Unidirectional dependency (only import from layers below). Cross-slice imports ONLY via `index.ts` Public API.
+- **Slice Internals:** `ui/`, `model/` (state/hooks/schemas), `api/` (requests), `lib/` (utils).
 
-## 2. Agent-Specific Guardrails
-- **Avoid Duplication:** Before creating a new UI component, ALWAYS check `shared/ui` (or the shadcn folder) to see if it already exists.
-- **Dependency Management:** Do NOT install new npm packages without asking for the user's explicit approval first.
-- **shadcn/ui Installation:** When adding new shadcn components, use the CLI (`npx shadcn@latest add <component_name>`) rather than trying to hand-write or guess the component's code.
+## Accessibility (WCAG 2.2 AA)
+- Semantic HTML > ARIA.
+- 100% keyboard navigable (visible focus, no traps).
+- Meaningful `alt` for images, `.sr-only`/`aria-label` for icons, `aria-live` for dynamic content.
+- Contrast: 4.5:1 (text), 3:1 (large text/UI).
+- Min touch target: 24x24px.
+- Respect `prefers-reduced-motion`.
 
-## 3. Architecture: Feature-Sliced Design (FSD)
-The project strictly follows the [Feature-Sliced Design (FSD)](https://fsd.how/docs/get-started/overview/) architectural methodology. 
+## Testing Strategy
+- **Unit/Integration:** Test user behavior. Query by a11y roles (`getByRole`). Use `@testing-library/user-event`. Assert with `jest-axe`.
+- **E2E:** Cover critical flows. Automate a11y with `@axe-core/playwright`.
 
-### Layers
-Organize code into the following layers (from top to bottom):
-1. **`app/`**: Global settings, global styles, and providers (routing, state, etc.).
-2. **`processes/`**: (Optional) Complex cross-page scenarios and flows.
-3. **`pages/`**: Compositional layer to construct routes/pages from entities, features, and widgets.
-4. **`widgets/`**: Compositional layer combining entities and features into meaningful, standalone blocks (e.g., Header, Sidebar).
-5. **`features/`**: User interactions, actions, and operations that bring business value (e.g., AddToCart, UserAuth).
-6. **`entities/`**: Core business entities and domains (e.g., User, Product, Order).
-7. **`shared/`**: Reusable, decoupled infrastructure code (UI kit components, utilities, API clients).
-
-### Internal Slice Structure
-To keep the codebase clean and consistent, complex slices (especially within `features/` and `entities/`) should follow a standard internal structure:
-- `ui/`: UI components specific to the slice.
-- `model/`: Business logic, state (Zustand stores), hooks, and types/schemas.
-- `api/`: API requests and data fetching logic (React Query hooks).
-- `lib/`: Slice-specific utilities and helpers.
-
-### Strict FSD Rules
-- **Unidirectional Dependency:** A layer can only import from layers *strictly below* it. For example, `features` can import from `entities` and `shared`, but NEVER from `widgets` or `pages`.
-- **Public API:** Each slice or segment must expose its contents via an `index.ts` file (its Public API). Modules must ONLY import from other slices using their Public API, never reaching into internal files.
-
-## 4. Accessibility (First-Class Priority - WCAG 2.2)
-Accessibility is a primary requirement. All implementations must adhere to [WCAG 2.2 AA standards](https://www.w3.org/TR/WCAG22/).
-
-- **Semantic HTML:** Always use native, semantic HTML elements (`<button>`, `<nav>`, `<main>`, `<dialog>`, `<header>`, etc.) over generic `<div>` wrappers. Only use ARIA roles when native semantics fall short.
-- **Keyboard Navigation:** Every interactive element MUST be focusable and operable via keyboard alone. Ensure visible and distinct focus indicators (`focus-visible`). Do not trap focus unless within a modal/dialog.
-- **Screen Reader Support:** 
-  - Provide meaningful alternative text (`alt`) for all images.
-  - Use `.sr-only` (screen-reader only text) or `aria-label` for icon-only buttons and links.
-  - Announce dynamic content changes using `aria-live` regions.
-- **Color Contrast:** Maintain at least a 4.5:1 contrast ratio for normal text and 3:1 for large text and interactive UI elements.
-- **Target Size (WCAG 2.2 addition):** Ensure interactive touch targets are at least 24x24 CSS pixels minimum (44x44 recommended).
-- **Reduced Motion:** Respect `prefers-reduced-motion` CSS media queries for animations.
-
-## 5. Testing Strategy
-- **Unit / Integration (Vitest + RTL):**
-  - Test user behavior, not implementation details.
-  - Query elements by accessible roles (`getByRole`, `getByLabelText`) to enforce accessibility at the test level.
-  - Use `@testing-library/user-event` instead of `fireEvent`.
-  - Integrate `jest-axe` to run basic accessibility assertions in unit tests.
-- **End-to-End (Playwright):**
-  - Cover critical user flows and paths.
-  - Utilize `@axe-core/playwright` to run automated accessibility audits on full pages and states.
-
-## 6. Coding Standards & Best Practices
-- **Type Safety:** NEVER use `any` or `@ts-ignore`. Ensure rigorous TypeScript typing throughout the codebase.
-- **Exports:** Use **named exports** exclusively (e.g., `export const Component = ...`) rather than `export default`. This improves refactoring, searchability, and consistency across the codebase.
-- **Components:** Prefer functional components. Explicitly type component props using TypeScript interfaces.
-- **Data Fetching & Loading States:** Rely on React Query for remote state and caching. Avoid using `useEffect` for data fetching. Use Tanstack Router `loader` functions and/or React `<Suspense>` boundaries paired with Error Boundaries to gracefully handle data fetching states.
-- **Styling:** Use Tailwind utility classes. Extract highly repetitive utility combinations using `cva` (Class Variance Authority) or standard React components (often handled by shadcn).
-- **Error Handling:** Implement Error Boundaries at the widget/page layer to gracefully catch and display errors. Handle API errors consistently.
+## Strict Guardrails & Best Practices
+- NEVER use `any` or `@ts-ignore`.
+- ALWAYS use named exports (`export const Component = ...`).
+- NEVER install npm packages without asking.
+- AVOID duplication: Check `shared/ui` (or shadcn) before creating UI components.
+- KEEP files under ~200 lines. If a component grows too large, extract complex state/logic into custom hooks (model/) and isolate sub-components into smaller files (ui/) to maintain readability.
+- PREFER functional components with explicit TS prop interfaces.
+- NO `useEffect` for data fetching. Use React Query.
+- HANDLE loading/errors: Use Tanstack Router `loader` and/or `<Suspense>` + Error Boundaries.
+- USE absolute path aliases (e.g., `@/features/auth`) instead of deep relative imports. Ensure `tsconfig.json` (`paths`) and `vite.config.ts` (`resolve.alias` or `vite-tsconfig-paths`) are configured to support the `@/` prefix mapping to `./src/`.
+- BEFORE creating a new feature slice, check if the required logic already exists. If it exists in shared or entities, reuse it. If it exists in a sibling slice (like another feature), DO NOT cross-import. Instead, extract the shared logic down into entities or shared first.
